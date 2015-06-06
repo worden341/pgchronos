@@ -1,3 +1,6 @@
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+\echo Use "CREATE EXTENSION pgchronos" to load this file. \quit
+
 CREATE OR REPLACE FUNCTION contains(
     tsr tstzrange[],
     ts timestampTz
@@ -106,7 +109,7 @@ select coalesce
     false
 );
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION exists_upper(ts tstzrange, tsr tstzrange[]) is 'A range exists in tsr having an upper bound of ts.';
+COMMENT ON FUNCTION exists_upper(ts timestamptz, tsr tstzrange[]) is 'A range exists in tsr having an upper bound of ts.';
 
 CREATE OR REPLACE FUNCTION difference(
    ts1  IN tstzrange[], 

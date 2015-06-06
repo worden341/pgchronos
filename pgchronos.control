@@ -1,0 +1,4 @@
+# pgchronos extension
+comment = 'Perform union, intersection, and difference operations on sets of daterange and tstzrange types'
+default_version = '1.0'
+relocatable = true

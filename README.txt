@@ -1,4 +1,4 @@
-pgchronos are sql functions and operators for Postgresql for performing union, intersection, and difference operations on sets of tsrange and tstzrange types.
+pgchronos are sql functions and operators for Postgresql for performing union, intersection, and difference operations on sets of daterange and tstzrange types.
 
 As an example of a difference operation, imagine a hotel where frequent customers can earn special member rates during most of the year, excluding holiday weeks.
 
@@ -12,12 +12,15 @@ Select unnest(
  [2015-01-07,2015-01-21)
  [2015-01-22,2015-01-29)
 
-These functions were originally developed as part of the ChronosDB project.  That code became half-redundant when Postgres introduced range data types in version 9.2. This code is a fork that brings it current with the latest Postgres versions and utilizes the native Postgres range data types.
+These functions were originally developed as part of the ChronosDB project.  That code became half-redundant when Postgres introduced range data types in version 9.2. This code is a fork that brings it current with the latest Postgres versions, and utilizes the native Postgres range data types.  The current project site is https://github.com/worden341/pgchronos.
 
-*****************
-NOTE
-This code is incomplete and lightly-tested. I hurriedly prepared it for a conference presentation.  It needs:
-* Implementation of the "intersection" and "range_union" functions for tsrange and tstzrange types
-* Complete tests
-* Packaging as a Postgresql extension
-*****************
+
+REQUIREMENTS
+
+pgchronos utilizes the range datatypes introduced in Postgresql 9.2, therefore that is the minimum version you can use with this extension.
+
+
+INSTALLATION
+
+Copy all pgchronos* files to Postgresql's extension directory; on Debian, that is /usr/share/postgresql/<version>/extension.  Then execute "CREATE EXTENSION pgchronos;".  After installation, you may choose to run the included test script tests_run.sql.
+

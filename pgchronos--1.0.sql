@@ -17,7 +17,7 @@ $$
         false
     );
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION contains(tstzrange[], timestampTz) IS 'True if ts contained in any range in tsr';
+COMMENT ON FUNCTION contains(tstzrange[], timestampTz) IS 'True if timestamp is contained in any range in the array';
 
 CREATE OR REPLACE FUNCTION contains(
     ts timestamptz,
@@ -26,7 +26,7 @@ CREATE OR REPLACE FUNCTION contains(
 $$
     select contains(tsr,ts);
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION contains(tstzrange[], timestampTz) IS 'True if ts contained in any range in tsr';
+COMMENT ON FUNCTION contains(timestamptz, tstzrange[]) IS 'True if timestamp is contained in any range in the array';
 
 CREATE OR REPLACE FUNCTION contains(
     d daterange[],
@@ -44,7 +44,7 @@ $$
         false
     );
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION contains(daterange[], date) IS 'True if date dt contained in any daterange in d';
+COMMENT ON FUNCTION contains(daterange[], date) IS 'True if date is contained in any daterange in the array';
 
 CREATE OR REPLACE FUNCTION contains(
     dt date,
@@ -53,7 +53,7 @@ CREATE OR REPLACE FUNCTION contains(
 $$
     select contains(d,dt);
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION contains(date, daterange[]) IS 'True if date dt contained in any daterange in d';
+COMMENT ON FUNCTION contains(date, daterange[]) IS 'True if date is contained in any daterange in the array';
 
 CREATE OR REPLACE FUNCTION exists_adjacent_lower(
     ts tstzrange,
@@ -72,7 +72,7 @@ select coalesce
     false
 );
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION exists_adjacent_lower(ts tstzrange, tsr tstzrange[]) is 'A range exists in tsr that is adjacent to the lower side of ts.';
+COMMENT ON FUNCTION exists_adjacent_lower(ts tstzrange, tsr tstzrange[]) is 'True if a range exists in the array that is adjacent to the lower bound of the range operand';
 
 CREATE OR REPLACE FUNCTION exists_adjacent_upper(
     ts tstzrange,
@@ -91,7 +91,7 @@ select coalesce
     false
 );
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION exists_adjacent_upper(ts tstzrange, tsr tstzrange[]) is 'A range exists in tsr that is adjacent to the upper side of ts.';
+COMMENT ON FUNCTION exists_adjacent_upper(ts tstzrange, tsr tstzrange[]) is 'True if a range exists in the array that is adjacent to the upper bound of the range operand.';
 
 CREATE OR REPLACE FUNCTION exists_upper(
     ts timestamptz,
@@ -109,7 +109,7 @@ select coalesce
     false
 );
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION exists_upper(ts timestamptz, tsr tstzrange[]) is 'A range exists in tsr having an upper bound of ts.';
+COMMENT ON FUNCTION exists_upper(ts timestamptz, tsr tstzrange[]) is 'True if a range exists in the array having its upper bound equal to the timestamp';
 
 CREATE OR REPLACE FUNCTION difference(
    ts1  IN tstzrange[], 
@@ -148,6 +148,7 @@ $$
         ORDER BY (d_in).start_date
     ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
+comment on FUNCTION difference(tstzrange[], tstzrange[]) is 'Subtract from the first operand range segments that are occupied by the second operand.';
 
 CREATE OR REPLACE FUNCTION difference(
    dr1  IN daterange[], 
@@ -186,8 +187,7 @@ $$
         ORDER BY (d_in).start_date
     ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION difference(daterange[], daterange[])
-IS 'Return daterange[] containing all values in dr1 that are not filtered out by dr2';
+comment on FUNCTION difference(daterange[], daterange[]) is 'Subtract from the first operand range segments that are occupied by the second operand.';
 
 CREATE OR REPLACE FUNCTION intersection(
     dr1 IN tstzrange[], 
@@ -227,7 +227,7 @@ $$
         ORDER BY t_in.start_date
     ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION intersection(tstzrange[], tstzrange[]) IS 'Return tstzrange[] containing all values in both dr1 and dr2';
+COMMENT ON FUNCTION intersection(tstzrange[], tstzrange[]) IS 'Return all range segments common to both operands';
 
 CREATE OR REPLACE FUNCTION intersection(
     dr1 IN daterange[], 
@@ -267,7 +267,7 @@ $$
         ORDER BY t_in.start_date
     ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION intersection(daterange[], daterange[]) IS 'Return daterange[] containing all values in both dr1 and dr2';
+COMMENT ON FUNCTION intersection(daterange[], daterange[]) IS 'Return all range segments common to both operands';
 
 CREATE OR REPLACE FUNCTION reduce(dr tstzrange[])
 RETURNS tstzrange[] AS
@@ -301,7 +301,7 @@ $$
     ) sub2
     ;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION reduce(tstzrange[]) IS 'Union overlapping and adjacent ranges';
+COMMENT ON FUNCTION reduce(tstzrange[]) IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';
 
 CREATE OR REPLACE FUNCTION reduce(dr daterange[])
 RETURNS daterange[] AS
@@ -323,7 +323,7 @@ $$
         ORDER BY t_in.start_date
     ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
-COMMENT ON FUNCTION reduce(daterange[]) IS 'Union overlapping and adjacent ranges';
+COMMENT ON FUNCTION reduce(daterange[]) IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';
 
 CREATE OR REPLACE FUNCTION range_union(
    dr1  IN tstzrange[],
@@ -333,7 +333,7 @@ $$
    SELECT reduce(dr1 || dr2);
 $$ LANGUAGE 'sql' IMMUTABLE;
 COMMENT ON FUNCTION range_union(tstzrange[], tstzrange[])
-IS 'Union overlapping and adjacent ranges';
+IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';
 
 CREATE OR REPLACE FUNCTION range_union(
    dr1  IN daterange[],
@@ -343,7 +343,7 @@ $$
    SELECT reduce(dr1 || dr2);
 $$ LANGUAGE 'sql' IMMUTABLE;
 COMMENT ON FUNCTION range_union(daterange[], daterange[])
-IS 'Union overlapping and adjacent ranges';
+IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';
 
 CREATE OPERATOR @>(
   PROCEDURE = contains,

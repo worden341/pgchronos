@@ -1,5 +1,5 @@
 \set datatype 'daterange'
-\i tests.sql
+\ir tests.sql
 
 \set datatype 'tstzrange'
-\i tests.sql
+\ir tests.sql

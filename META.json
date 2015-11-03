@@ -29,7 +29,7 @@
     },
     "tags": ["range", "daterange", "tstzrange", "dates", "operators"],
     "meta-spec": {
-        "version": "1.0.1",
+        "version": "1.0.0",
         "url": "http://pgxn.org/meta/spec.txt"
     }
 }

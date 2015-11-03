@@ -1,14 +1,14 @@
 {
     "name": "pgchronos",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "abstract": "sql functions and operators for Postgresql for performing union, intersection, and difference operations on sets of daterange and tstzrange types",
     "maintainer": "Eric Worden <worden.eric@gmail.com>",
     "license": "bsd",
     "provides": {
         "pgchronos": {
-            "file": "sql/pgchronos--1.0.sql",
+            "file": "sql/pgchronos--1.0.1.sql",
             "docfile": "README.md",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "abstract": "sql functions and operators for Postgresql for performing union, intersection, and difference operations on sets of daterange and tstzrange types"
         }
     },
@@ -19,7 +19,7 @@
             }
         }
     },
-    "release_status": "testing",
+    "release_status": "stable",
     "resources": {
         "repository": {
             "web": "https://github.com/worden341/pgchronos",
@@ -29,7 +29,7 @@
     },
     "tags": ["range", "daterange", "tstzrange", "dates", "operators"],
     "meta-spec": {
-        "version": "1.0.0",
+        "version": "1.0.1",
         "url": "http://pgxn.org/meta/spec.txt"
     }
 }

@@ -272,33 +272,36 @@ COMMENT ON FUNCTION intersection(daterange[], daterange[]) IS 'Return all range 
 CREATE OR REPLACE FUNCTION reduce(dr tstzrange[])
 RETURNS tstzrange[] AS
 $$
-    with sub as
-    (
-        SELECT start_date, MIN(end_date) as end_date
-        FROM (
-            SELECT DISTINCT lower(d) AS start_date
-            FROM unnest(dr) d
-            WHERE NOT exists_adjacent_lower(d,dr)
-        ) AS t_in
-        JOIN (
-            SELECT upper(d) AS end_date
-            FROM unnest(dr) d
-            WHERE NOT contains(dr, upper(d))
-                AND NOT exists_adjacent_upper(d,dr)
-        ) AS t_out ON t_in.start_date < t_out.end_date
-        GROUP BY t_in.start_date
-    )
+--TODO: inclusiveness-aware
+    with d as (select distinct unnest(dr) d)
     select array_agg(r)
     from
     (
-        select tstzrange(MIN(s2.start_date), s2.end_date) r
-        from 
-            sub s1
-            join sub s2
-                on s1.end_date = s2.end_date
-                and s1.start_date <> s2.start_date
-        group by s2.end_date
-    ) sub2
+        SELECT tstzrange(start_date, MIN(end_date)) r
+        FROM (
+            SELECT DISTINCT lower(d) AS start_date
+            FROM d
+            WHERE NOT exists_adjacent_lower(d,dr)
+                AND NOT EXISTS (
+                    select 1 from d d2
+                    where true
+                        and lower(d.d) <@ d2.d
+                        and lower(d.d) <> lower(d2.d)
+                )
+        ) AS t_in
+        JOIN (
+            SELECT upper(d) AS end_date
+            FROM d
+            WHERE NOT exists_adjacent_upper(d,dr)
+                AND NOT EXISTS (
+                    select 1 from d d2
+                    where true
+                        and upper(d.d) <@ d2.d
+                        and upper(d.d) <> upper(d2.d)
+                )
+        ) AS t_out ON t_in.start_date < t_out.end_date
+        GROUP BY t_in.start_date
+    ) sub
     ;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
 COMMENT ON FUNCTION reduce(tstzrange[]) IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';

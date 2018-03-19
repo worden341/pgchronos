@@ -21,7 +21,10 @@ insert into pg_chronos_test_set1 (range) values
     (:datatype('2015-01-25', '2015-01-27')),
     (:datatype('2015-01-27', '2015-01-29')),
     (:datatype('2015-01-31', '2015-02-01')),
-    (:datatype('2015-01-31', '2015-02-01'));
+    (:datatype('2015-01-31', '2015-02-01')),
+    (:datatype('2015-01-31', '2015-02-01', '[]')),
+    (:datatype('2015-01-31', '2015-02-01', '(]')),
+    (:datatype('2015-01-31', '2015-02-01', '()'));
 
 insert into pg_chronos_test_set2 (range) values
     (:datatype('2015-01-03', '2015-01-05')),
@@ -45,7 +48,7 @@ insert into pg_chronos_test_union (range) values
     (:datatype('2015-01-02', '2015-01-06')),
     (:datatype('2015-01-07', '2015-01-21')),
     (:datatype('2015-01-22', '2015-01-29')),
-    (:datatype('2015-01-31', '2015-02-01')),
+    (:datatype('2015-01-31', '2015-02-01', '[]')),
     (:datatype('2015-02-03', '2015-02-05'));
 
 insert into pg_chronos_test_intersection (range) values

@@ -126,37 +126,85 @@ $$ LANGUAGE 'sql' IMMUTABLE STRICT;
 COMMENT ON FUNCTION exists_upper(ts timestamptz, tsr tstzrange[]) is 'True if a range exists in the array having its upper bound equal to the timestamp';
 
 CREATE OR REPLACE FUNCTION difference(
-   ts1  IN tstzrange[], 
+   ts1  IN tstzrange[],
    ts2  IN tstzrange[]
 ) RETURNS tstzrange[] AS
 $$
+--TODO: inclusiveness-aware
+    with
+        t_ts1 as (select unnest(ts1) d),
+        t_ts2 as (select * from unnest(ts2) d where not isempty(d))
     SELECT array_agg(prd)
     FROM (
         SELECT tstzrange((d_in).start_date, MIN((d_out).end_date)) AS prd
         FROM (
-            SELECT DISTINCT lower(d) AS start_date
-            FROM unnest(ts1) d
-            WHERE NOT contains(ts2, lower(d))
-            AND NOT exists_adjacent_lower(d,ts1)
+            SELECT lower(d) AS start_date
+            FROM t_ts1
+            WHERE
+                not exists
+                (
+                    --~~ lower(d1.d) contained in ts2:
+                    select 1 from t_ts2
+                    where
+                        d && t_ts1.d
+                        and t_ts1.d &> d
+                )
 
             UNION
 
-            SELECT DISTINCT upper(d)
-            FROM unnest(ts2) d
-            WHERE contains(ts1, upper(d))
-            AND NOT contains(ts2, upper(d))
+            SELECT upper(d)
+            FROM t_ts2
+            WHERE
+                exists
+                (
+                    --~~ t_ts2.d contained in ts1:
+                    select 1 from t_ts1
+                    where
+                        t_ts1.d && t_ts2.d
+                        and
+                        (
+                            not t_ts1.d &> t_ts2.d
+                            and not
+                            (
+                                t_ts2.d &< t_ts1.d
+                                and t_ts1.d &< t_ts2.d
+                            )
+                        )
+                )
         ) d_in
         JOIN (
             SELECT upper(d) AS end_date
-            FROM unnest(ts1) d
-            WHERE NOT contains(ts1, upper(d))
+            FROM t_ts1
+            WHERE
+                not exists
+                (
+                    select 1 from t_ts2
+                    where
+                        t_ts2.d && t_ts1.d
+                        and
+                        (
+                            not t_ts2.d &< t_ts1.d
+                            or
+                            (
+                                t_ts2.d &< t_ts1.d
+                                and t_ts1.d &< t_ts2.d
+                            )
+                        )
+                )
 
-            UNION ALL
+            UNION
 
             SELECT lower(d)
-            FROM unnest(ts2) d
-            WHERE contains(ts1, lower(d))
-              AND NOT exists_adjacent_lower(d,ts2)
+            FROM t_ts2
+            WHERE --contains(ts1, lower(d))
+                exists
+                (
+                    --~~ lower(t_ts2.d) contained in ts1:
+                    select 1 from t_ts1
+                    where
+                        t_ts1.d && t_ts2.d
+                        and not t_ts1.d &> t_ts2.d
+                )
         ) d_out ON d_in.start_date < d_out.end_date
         GROUP BY (d_in).start_date
         ORDER BY (d_in).start_date
@@ -286,7 +334,7 @@ COMMENT ON FUNCTION intersection(daterange[], daterange[]) IS 'Return all range 
 CREATE OR REPLACE FUNCTION reduce(dr tstzrange[])
 RETURNS tstzrange[] AS
 $$
-    with d as (select distinct unnest(dr) d)
+    with d as (select distinct d from unnest(dr) d)
     select array_agg(r)
     from
     (
@@ -372,7 +420,7 @@ CREATE OR REPLACE FUNCTION range_union(
 ) RETURNS tstzrange[] AS
 $$
    SELECT reduce(dr1 || dr2);
-$$ LANGUAGE 'sql' IMMUTABLE;
+$$ LANGUAGE 'sql' IMMUTABLE STRICT;
 COMMENT ON FUNCTION range_union(tstzrange[], tstzrange[])
 IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';
 

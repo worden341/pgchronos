@@ -4,13 +4,29 @@ begin;
 
 \echo datatype is :datatype
 
-create table pg_chronos_test_base (range :datatype);
+create table if not exists pg_chronos_test_base (range :datatype);
 
-create table pg_chronos_test_set1 (like pg_chronos_test_base including all);
-create table pg_chronos_test_set2 (like pg_chronos_test_base including all);
-create table pg_chronos_test_difference (like pg_chronos_test_base including all);
-create table pg_chronos_test_union (like pg_chronos_test_base including all);
-create table pg_chronos_test_intersection (like pg_chronos_test_base including all);
+create table if not exists pg_chronos_test_set1 (like pg_chronos_test_base including all);
+create table if not exists pg_chronos_test_set2 (like pg_chronos_test_base including all);
+create table if not exists pg_chronos_test_difference (like pg_chronos_test_base including all);
+create table if not exists pg_chronos_test_union (like pg_chronos_test_base including all);
+create table if not exists pg_chronos_test_intersection (like pg_chronos_test_base including all);
+
+delete from pg_chronos_test_set1;
+delete from pg_chronos_test_set2;
+delete from pg_chronos_test_difference;
+delete from pg_chronos_test_union;
+delete from pg_chronos_test_intersection;
+
+create or replace function ts1()
+returns tstzrange[]
+stable
+language sql as $$ select reduce(array_agg(range)) from pg_chronos_test_set1; $$;
+
+create or replace function ts2()
+returns tstzrange[]
+stable
+language sql as $$ select reduce(array_agg(range)) from pg_chronos_test_set2; $$;
 
 insert into pg_chronos_test_set1 (range) values
     (:datatype('2015-01-02', '2015-01-06')),
@@ -79,8 +95,8 @@ from
         select
             unnest
             (
-                (select array_agg(range) from pg_chronos_test_set1) - 
-                (select array_agg(range) from pg_chronos_test_set2)
+                (select ts1()) - 
+                (select ts2())
             ) result
     ) result
     full outer join pg_chronos_test_difference t

@@ -334,7 +334,7 @@ COMMENT ON FUNCTION intersection(daterange[], daterange[]) IS 'Return all range 
 CREATE OR REPLACE FUNCTION reduce(dr tstzrange[])
 RETURNS tstzrange[] AS
 $$
-    with d as (select distinct d from unnest(dr) d)
+    with d as (select distinct d from unnest(dr) d where not isempty(d))
     select array_agg(r)
     from
     (
@@ -346,44 +346,83 @@ $$
             FROM (
                 SELECT lower(d) AS start_date, max(lower_inc(d)::int)::bool as inc
                 FROM d
-                WHERE NOT exists_adjacent_lower(d,dr)
+                WHERE
+                    NOT exists_adjacent_lower(d,dr)
                     AND NOT EXISTS (
                         select 1 from d d2
                         where true
-                            and lower(d.d) <@ d2.d
-                            and lower(d.d) <> lower(d2.d)
+                            and d.d && d2.d
+                            and d.d &> d2.d
+                            --and lower(d.d) <@ d2.d
+                            and
+                            (
+                                lower(d.d) <> lower(d2.d)
+                                or (not lower_inf(d.d) and lower_inf(d2.d))
+                            )
                     )
                 GROUP BY lower(d)
             ) AS t_in
             JOIN (
                 SELECT upper(d) AS end_date, max(upper_inc(d)::int)::bool as inc
                 FROM d
-                WHERE NOT exists_adjacent_upper(d,dr)
+                WHERE
+                    NOT exists_adjacent_upper(d,dr)
                     AND NOT EXISTS (
                         select 1 from d d2
                         where true
-                            and upper(d.d) <@ d2.d
-                            and upper(d.d) <> upper(d2.d)
+                            and d.d && d2.d
+                            --and upper(d.d) <@ d2.d
+                            and d.d &< d2.d
+                            and
+                            (
+                                upper(d.d) <> upper(d2.d)
+                                or (not upper_inf(d.d) and upper_inf(d2.d))
+                            )
                     )
                 GROUP BY upper(d)
             ) AS t_out ON t_in.start_date < t_out.end_date
+                or
+                (
+                    t_in.start_date = t_out.end_date
+                    and t_in.inc
+                    and t_out.inc
+                    and array[tstzrange(t_in.start_date, t_out.end_date, '[]')] <@ dr
+                )
+                or t_in.start_date is null or t_out.end_date is null
         )
         select r
         from combos c1
         where
-            exists (
+            not isempty(r)
+            and exists (
                 select 1
                 from combos
                 group by start_date
                 having
-                    start_date = c1.start_date
-                    and min(end_date) = c1.end_date
+                    (
+                        start_date = c1.start_date
+                        or (start_date is null and c1.start_date is null)
+                    )
+                    and
+                    (
+                        min(end_date) = c1.end_date
+                        or (min(end_date) is null and c1.end_date is null)
+                    )
             )
             and not exists (
+                --same dates, more inclusive:
                 select 1 from combos
                 where true
-                    and start_date = c1.start_date
-                    and end_date = c1.end_date
+                    and
+                    (
+                        start_date = c1.start_date
+                        or (start_date is null and c1.start_date is null)
+                    )
+                    and
+                    (
+                        end_date = c1.end_date
+                        or (end_date is null and c1.end_date is null)
+                    )
                     and r <> c1.r
                     and c1.r <@ r
             )

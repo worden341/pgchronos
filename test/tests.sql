@@ -1,161 +1,51 @@
+\pset format unaligned
+\pset tuples_only true
+
+\set ON_ERROR_ROLLBACK 1
 \set ON_ERROR_STOP true
+\set QUIET 1
 
-begin;
+BEGIN;
 
-\echo datatype is :datatype
+\ir test_tables.sql
 
-create table if not exists pg_chronos_test_base (range :datatype);
+create or replace function test_f1()
+returns setof text
+language plpgsql as $func$
+declare
+    v_record record;
+    v_row test_result%rowtype;
+    v_id text;
+    v_r1_lower timestamptz;
+    v_r1_upper timestamptz;
+    v_r2_lower timestamptz;
+    v_r2_upper timestamptz;
+    v_lower_inc1 boolean;
+    v_upper_inc1 boolean;
+    v_lower_inc2 boolean;
+    v_upper_inc2 boolean;
+    v_result tstzrange[];
+begin
+    for v_id, v_r1_lower, v_r1_upper, v_r2_lower, v_r2_upper, v_lower_inc1, v_upper_inc1, v_lower_inc2, v_upper_inc2, v_result in
+    select ts.id, r1_lower, r1_upper, r2_lower, r2_upper, lower_inc1, upper_inc1, lower_inc2, upper_inc2, tr.result
+    from
+        test_sequence ts
+        join test_result tr on ts.id = tr.sequence_id
+    order by tr.id LOOP
+        return next is((reduce(array[tstzrange(v_r1_lower, v_r1_upper, pgchronos_range_inclusiveness_text(v_lower_inc1, v_upper_inc1)), tstzrange(v_r2_lower, v_r2_upper, pgchronos_range_inclusiveness_text(v_lower_inc2, v_upper_inc2))]))::text, v_result::text,
+            format('reduce %s%s%s %s%s%s',
+                case when v_lower_inc1 then '[' else '(' end,
+                substr(v_id, 1, 2),
+                case when v_upper_inc1 then ']' else ')' end,
+                case when v_lower_inc2 then '[' else '(' end,
+                substr(v_id, 3),
+                case when v_upper_inc2 then ']' else ')' end
+            )
+        );
+    end loop;
+end;
+$func$;
 
-create table if not exists pg_chronos_test_set1 (like pg_chronos_test_base including all);
-create table if not exists pg_chronos_test_set2 (like pg_chronos_test_base including all);
-create table if not exists pg_chronos_test_difference (like pg_chronos_test_base including all);
-create table if not exists pg_chronos_test_union (like pg_chronos_test_base including all);
-create table if not exists pg_chronos_test_intersection (like pg_chronos_test_base including all);
+select * from runtests();
 
-delete from pg_chronos_test_set1;
-delete from pg_chronos_test_set2;
-delete from pg_chronos_test_difference;
-delete from pg_chronos_test_union;
-delete from pg_chronos_test_intersection;
-
-create or replace function ts1()
-returns tstzrange[]
-stable
-language sql as $$ select reduce(array_agg(range)) from pg_chronos_test_set1; $$;
-
-create or replace function ts2()
-returns tstzrange[]
-stable
-language sql as $$ select reduce(array_agg(range)) from pg_chronos_test_set2; $$;
-
-insert into pg_chronos_test_set1 (range) values
-    (:datatype('2015-01-02', '2015-01-06')),
-    (:datatype('2015-01-07', '2015-01-10')),
-    (:datatype('2015-01-10', '2015-01-16')),
-    (:datatype('2015-01-18', '2015-01-21')),
-    (:datatype('2015-01-23', '2015-01-24')),
-    (:datatype('2015-01-25', '2015-01-27')),
-    (:datatype('2015-01-27', '2015-01-29')),
-    (:datatype('2015-01-31', '2015-02-01')),
-    (:datatype('2015-01-31', '2015-02-01')),
-    (:datatype('2015-01-31', '2015-02-01', '[]')),
-    (:datatype('2015-01-31', '2015-02-01', '(]')),
-    (:datatype('2015-01-31', '2015-02-01', '()'));
-
-insert into pg_chronos_test_set2 (range) values
-    (:datatype('2015-01-03', '2015-01-05')),
-    (:datatype('2015-01-08', '2015-01-11')),
-    (:datatype('2015-01-14', '2015-01-15')),
-    (:datatype('2015-01-15', '2015-01-20')),
-    (:datatype('2015-01-22', '2015-01-25')),
-    (:datatype('2015-01-27', '2015-01-29')),
-    (:datatype('2015-02-03', '2015-02-05'));
-
-insert into pg_chronos_test_difference (range) values
-    (:datatype('2015-01-02', '2015-01-03')),
-    (:datatype('2015-01-05', '2015-01-06')),
-    (:datatype('2015-01-07', '2015-01-08')),
-    (:datatype('2015-01-11', '2015-01-14')),
-    (:datatype('2015-01-20', '2015-01-21')),
-    (:datatype('2015-01-25', '2015-01-27')),
-    (:datatype('2015-01-31', '2015-02-01'));
-
-insert into pg_chronos_test_union (range) values
-    (:datatype('2015-01-02', '2015-01-06')),
-    (:datatype('2015-01-07', '2015-01-21')),
-    (:datatype('2015-01-22', '2015-01-29')),
-    (:datatype('2015-01-31', '2015-02-01', '[]')),
-    (:datatype('2015-02-03', '2015-02-05'));
-
-insert into pg_chronos_test_intersection (range) values
-    (:datatype('2015-01-03', '2015-01-05')),
-    (:datatype('2015-01-08', '2015-01-11')),
-    (:datatype('2015-01-14', '2015-01-16')),
-    (:datatype('2015-01-18', '2015-01-20')),
-    (:datatype('2015-01-23', '2015-01-24')),
-    (:datatype('2015-01-27', '2015-01-29'));
-
-\echo 'The following two tests should return true:'
-
-select tstzrange(now(), now() + interval '1 day') @> now();
-select daterange(current_date, (current_date + interval '1 day')::date) @> current_date;
-
-\echo 'The following two tests should return false:'
-
-select tstzrange(now(), now() + interval '1 day') @> now() + interval '1 day';
-select daterange(current_date, (current_date + interval '1 day')::date) @> (current_date + interval '1 day')::date;
-
-\echo The following tests should return two columns with matching values.
-\echo difference test
-select
-    t.range as target,
-    result.result
-from
-    (
-        select
-            unnest
-            (
-                (select ts1()) - 
-                (select ts2())
-            ) result
-    ) result
-    full outer join pg_chronos_test_difference t
-        on lower(t.range) = lower(result.result)
-        and upper(t.range) = upper(result.result)
-order by 
-    coalesce
-    (
-        lower(t.range),
-        lower(result.result)
-    )
-;
-
-\echo intersection test
-select
-    t.range as target,
-    result.result
-from
-    (
-        select
-            unnest
-            (
-                (select array_agg(range) from pg_chronos_test_set1) *
-                (select array_agg(range) from pg_chronos_test_set2)
-            ) result
-    ) result
-    full outer join pg_chronos_test_intersection t
-        on lower(t.range) = lower(result.result)
-        and upper(t.range) = upper(result.result)
-order by 
-    coalesce
-    (
-        lower(t.range),
-        lower(result.result)
-    )
-;
-
-\echo union test
-select
-    t.range as target,
-    result.result
-from
-    (
-        select
-            unnest
-            (
-                (select array_agg(range) from pg_chronos_test_set1) +
-                (select array_agg(range) from pg_chronos_test_set2)
-            ) result
-    ) result
-    full outer join pg_chronos_test_union t
-        on lower(t.range) = lower(result.result)
-        and upper(t.range) = upper(result.result)
-order by 
-    coalesce
-    (
-        lower(t.range),
-        lower(result.result)
-    )
-;
-
-rollback;
+ROLLBACK;

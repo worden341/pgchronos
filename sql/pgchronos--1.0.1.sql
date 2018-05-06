@@ -335,7 +335,7 @@ CREATE OR REPLACE FUNCTION reduce(dr tstzrange[])
 RETURNS tstzrange[] AS
 $$
     with d as (select distinct d from unnest(dr) d where not isempty(d))
-    select array_agg(r)
+    select coalesce(array_agg(r), array[]::tstzrange[])
     from
     (
         with combos as (

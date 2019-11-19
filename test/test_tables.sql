@@ -55,7 +55,7 @@ create table test_result
 (
     id serial primary key,
     sequence_id text references test_sequence(id),
-    datatype text not null constraint ck_datatype check (datatype in ('date[]','tstz[]','ts[]')),
+    datatype text not null constraint ck_datatype check (datatype in ('date','tstz','ts')),
     operator text not null constraint ck_operator check (operator in ('+','-','*')),
     lower_inc1 boolean,
     upper_inc1 boolean,

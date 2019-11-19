@@ -55,14 +55,15 @@ create table test_result
 (
     id serial primary key,
     sequence_id text references test_sequence(id),
-    operator text not null,
+    datatype text not null constraint ck_datatype check (datatype in ('date[]','tstz[]','ts[]')),
+    operator text not null constraint ck_operator check (operator in ('+','-','*')),
     lower_inc1 boolean,
     upper_inc1 boolean,
     lower_inc2 boolean,
     upper_inc2 boolean,
     result tstzrange[]
 );
-alter table test_result add constraint test_result_uniq unique (sequence_id, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2);
+alter table test_result add constraint test_result_uniq unique (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2);
 
 DO $anon$
 declare

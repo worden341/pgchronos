@@ -8,9 +8,9 @@
 BEGIN;
 
 \ir test_tables.sql
-\copy test_result from 'test_result.copy'
+\ir load_results.sql
 
-create or replace function test_f1()
+create or replace function test_reduce_tstz()
 returns setof text
 language plpgsql as $func$
 declare

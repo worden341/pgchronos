@@ -1,7 +1,13 @@
-insert into test_result (sequence_id, operator, lower_inc1, upper_inc1, result)
+\set ON_ERROR_STOP true
+begin;
+
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result)
 select
     '' as id,
-    '+' op
+    'tstz[]' datatype,
+    '+' op,
+    false,
+    false,
     reduce(array[]::tstzrange[]) result
 ;
 
@@ -31,8 +37,13 @@ with combos as
             (r1_lower is null and lower_inc1)
             or (r1_upper is null and upper_inc1)
         )
+        and not
+        (
+            r1_lower = r1_upper
+            and (not lower_inc1 or not upper_inc1)
+        )
 )
-insert into test_result (sequence_id, operator, lower_inc1, upper_inc1, result)
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result)
 select
 --     format('%s%s%s',
 --         case when lower_inc1 then '[' else '(' end,
@@ -40,12 +51,13 @@ select
 --         case when upper_inc1 then ']' else ')' end
 --     ) id,
     id,
+    'tstz[]' datatype,
     '+' op,
     lower_inc1,
-    upper_inc1
+    upper_inc1,
     reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
 from combos
-order by 1,3,4,5,6
+order by 1,3,4,5
 --order by 1
 ;
 
@@ -90,8 +102,18 @@ with combos as
             or (r2_upper is null and upper_inc2)
         )
         and not (ts.id = '1111' and inc1.lower_inc1) --eliminate redundant tests
+        and not --invalid
+        (
+            r1_lower = r1_upper
+            and (not lower_inc1 or not upper_inc1)
+        )
+        and not --invalid
+        (
+            r2_lower = r2_upper
+            and (not lower_inc2 or not upper_inc2)
+        )
 )
-insert into test_result (sequence_id, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result)
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result)
 select
 --     format('%s%s%s %s%s%s',
 --         case when lower_inc1 then '[' else '(' end,
@@ -102,6 +124,7 @@ select
 --         case when upper_inc2 then ']' else ')' end
 --     ) id,
     id,
+    'tstz[]' datatype,
     '+' op,
     lower_inc1,
     upper_inc1,

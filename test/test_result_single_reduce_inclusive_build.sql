@@ -1,7 +1,10 @@
 \set ON_ERROR_STOP true
 begin;
 
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result)
+/******************
+* Reduce tstz 
+*******************/
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
 select
     '' as id,
     'tstz' datatype,
@@ -11,14 +14,13 @@ select
     reduce(array[]::tstzrange[]) result
 ;
 
-with combos as
-(
     select
         ts.id,
         ts.r1_lower,
         ts.r1_upper,
         inc1.lower_inc1,
         inc1.upper_inc1
+    into temporary table tmp_combos_2
     from
         test_sequence ts
         cross join
@@ -42,8 +44,9 @@ with combos as
             r1_lower = r1_upper
             and (not lower_inc1 or not upper_inc1)
         )
-)
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result)
+    ;
+
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
 select
 --     format('%s%s%s',
 --         case when lower_inc1 then '[' else '(' end,
@@ -56,13 +59,11 @@ select
     lower_inc1,
     upper_inc1,
     reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
-from combos
+from tmp_combos_2
 order by 1,3,4,5
 --order by 1
 ;
 
-with combos as
-(
     select
         ts.id,
         ts.r1_lower,
@@ -73,6 +74,7 @@ with combos as
         inc1.upper_inc1,
         inc2.lower_inc2,
         inc2.upper_inc2
+    into temporary table tmp_combos_4
     from
         test_sequence ts
         cross join
@@ -112,8 +114,9 @@ with combos as
             r2_lower = r2_upper
             and (not lower_inc2 or not upper_inc2)
         )
-)
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result)
+    ;
+
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_tstz)
 select
 --     format('%s%s%s %s%s%s',
 --         case when lower_inc1 then '[' else '(' end,
@@ -131,42 +134,49 @@ select
     lower_inc2,
     upper_inc2,
     reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1)), tstzrange(r2_lower, r2_upper, pgchronos_range_inclusiveness_text(lower_inc2, upper_inc2))]) result
-from combos
+from tmp_combos_4
 order by 1,3,4,5,6
 --order by 1
 ;
 
---Insert timestamp[] tests:
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result)
+/******************
+* Reduce date 
+*******************/
+
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_date)
 select
     '' as id,
-    'ts' datatype,
+    'date' datatype,
     '+' op,
     false,
     false,
-    reduce(array[]::tsrange[]) result
+    reduce(array[]::daterange[]) result
 ;
 
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result)
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_date)
 select
-    sequence_id, 'ts' datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2,
-    reduce(array[tsrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
-from test_result
-where
-    operator = '+'
-    and datatype = 'tstz'
-    and length(sequence_id) = 2;
-
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result)
+    id,
+    'date' datatype,
+    '+' op,
+    lower_inc1,
+    upper_inc1,
+    reduce(array[daterange(r1_lower::date, r1_upper::date, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
+from tmp_combos_2
+order by 1,3,4,5
+--order by 1
+;
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_date)
 select
-    sequence_id, 'ts' datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2,
-from test_result
-where
-    operator = '+'
-    and datatype = 'tstz'
-    and length(sequence_id) = 4;
-
+    id,
+    'date' datatype,
+    '+' op,
+    lower_inc1,
+    upper_inc1,
+    lower_inc2,
+    upper_inc2,
+    reduce(array[daterange(r1_lower::date, r1_upper::date, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1)), daterange(r2_lower::date, r2_upper::date, pgchronos_range_inclusiveness_text(lower_inc2, upper_inc2))]) result
+from tmp_combos_4
+order by 1,3,4,5,6
+--order by 1
+;
 commit;
-
---sed -e '/./s/["{}\]//g' -e '/08/s/ 00:00:00-08//g' -e '/01-04/s/2018-01-04/1/g' -e '/01-06/s/2018-01-06/2/g' -e '/01-22/s/2018-01-22/3/g' -e '/01-27/s/2018-01-27/4/g'
-

@@ -61,7 +61,9 @@ create table test_result
     upper_inc1 boolean,
     lower_inc2 boolean,
     upper_inc2 boolean,
-    result tstzrange[]
+    result_tstz tstzrange[],
+    result_ts tsrange[],
+    result_date daterange[]
 );
 alter table test_result add constraint test_result_uniq unique (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2);
 

@@ -14,37 +14,37 @@ select
     reduce(array[]::tstzrange[]) result
 ;
 
-    select
-        ts.id,
-        ts.r1_lower,
-        ts.r1_upper,
-        inc1.lower_inc1,
-        inc1.upper_inc1
-    into temporary table tmp_combos_2
-    from
-        test_sequence ts
-        cross join
-        (
-            values
-                (true, true),
-                (true, false),
-                (false, true),
-                (false, false)
-        ) inc1 (lower_inc1, upper_inc1)
-    where
-        length(ts.id) = 2
-        and not
-        (
-            --these are invalid values:
-            (r1_lower is null and lower_inc1)
-            or (r1_upper is null and upper_inc1)
-        )
-        and not
-        (
-            r1_lower = r1_upper
-            and (not lower_inc1 or not upper_inc1)
-        )
-    ;
+select
+    ts.id,
+    ts.r1_lower,
+    ts.r1_upper,
+    inc1.lower_inc1,
+    inc1.upper_inc1
+into temporary table tmp_combos_2
+from
+    test_sequence ts
+    cross join
+    (
+        values
+            (true, true),
+            (true, false),
+            (false, true),
+            (false, false)
+    ) inc1 (lower_inc1, upper_inc1)
+where
+    length(ts.id) = 2
+    and not
+    (
+        --these are invalid values:
+        (r1_lower is null and lower_inc1)
+        or (r1_upper is null and upper_inc1)
+    )
+    and not
+    (
+        r1_lower = r1_upper
+        and (not lower_inc1 or not upper_inc1)
+    )
+;
 
 insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
 select
@@ -64,57 +64,57 @@ order by 1,3,4,5
 --order by 1
 ;
 
-    select
-        ts.id,
-        ts.r1_lower,
-        ts.r1_upper,
-        ts.r2_lower,
-        ts.r2_upper,
-        inc1.lower_inc1,
-        inc1.upper_inc1,
-        inc2.lower_inc2,
-        inc2.upper_inc2
-    into temporary table tmp_combos_4
-    from
-        test_sequence ts
-        cross join
-        (
-            values
-                (true, true),
-                (true, false),
-                (false, true),
-                (false, false)
-        ) inc1 (lower_inc1, upper_inc1)
-        cross join
-        (
-            values
-                (true, true),
-                (true, false),
-                (false, true),
-                (false, false)
-        ) inc2 (lower_inc2, upper_inc2)
-    where true
-        and length(ts.id) = 4
-        and not
-        (
-            --these are invalid values:
-            (r1_lower is null and lower_inc1)
-            or (r1_upper is null and upper_inc1)
-            or (r2_lower is null and lower_inc2)
-            or (r2_upper is null and upper_inc2)
-        )
-        and not (ts.id = '1111' and inc1.lower_inc1) --eliminate redundant tests
-        and not --invalid
-        (
-            r1_lower = r1_upper
-            and (not lower_inc1 or not upper_inc1)
-        )
-        and not --invalid
-        (
-            r2_lower = r2_upper
-            and (not lower_inc2 or not upper_inc2)
-        )
-    ;
+select
+    ts.id,
+    ts.r1_lower,
+    ts.r1_upper,
+    ts.r2_lower,
+    ts.r2_upper,
+    inc1.lower_inc1,
+    inc1.upper_inc1,
+    inc2.lower_inc2,
+    inc2.upper_inc2
+into temporary table tmp_combos_4
+from
+    test_sequence ts
+    cross join
+    (
+        values
+            (true, true),
+            (true, false),
+            (false, true),
+            (false, false)
+    ) inc1 (lower_inc1, upper_inc1)
+    cross join
+    (
+        values
+            (true, true),
+            (true, false),
+            (false, true),
+            (false, false)
+    ) inc2 (lower_inc2, upper_inc2)
+where true
+    and length(ts.id) = 4
+    and not
+    (
+        --these are invalid values:
+        (r1_lower is null and lower_inc1)
+        or (r1_upper is null and upper_inc1)
+        or (r2_lower is null and lower_inc2)
+        or (r2_upper is null and upper_inc2)
+    )
+    and not (ts.id = '1111' and inc1.lower_inc1) --eliminate redundant tests
+    and not --invalid
+    (
+        r1_lower = r1_upper
+        and (not lower_inc1 or not upper_inc1)
+    )
+    and not --invalid
+    (
+        r2_lower = r2_upper
+        and (not lower_inc2 or not upper_inc2)
+    )
+;
 
 insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_tstz)
 select

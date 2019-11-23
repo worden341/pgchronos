@@ -35,11 +35,11 @@ begin
         join test_result tr on ts.id = tr.sequence_id
     where
         tr.operator = '+'
-        --and length(ts.id) = 4
+        and tr.result_tstz is not null
     order by tr.id LOOP
         if length(v_id) = 4 then
             return next is((reduce(array[tstzrange(v_r1_lower, v_r1_upper, pgchronos_range_inclusiveness_text(v_lower_inc1, v_upper_inc1)), tstzrange(v_r2_lower, v_r2_upper, pgchronos_range_inclusiveness_text(v_lower_inc2, v_upper_inc2))]))::text, v_result::text,
-                format('reduce %s%s%s %s%s%s id=%s',
+                format('reduce tstz %s%s%s %s%s%s id=%s',
                     case when v_lower_inc1 then '[' else '(' end,
                     substr(v_id, 1, 2),
                     case when v_upper_inc1 then ']' else ')' end,
@@ -51,7 +51,7 @@ begin
             );
         elsif length(v_id) = 2 then
             return next is((reduce(array[tstzrange(v_r1_lower, v_r1_upper, pgchronos_range_inclusiveness_text(v_lower_inc1, v_upper_inc1))]))::text, v_result::text,
-                format('reduce %s%s%s id=%s',
+                format('reduce tstz %s%s%s id=%s',
                     case when v_lower_inc1 then '[' else '(' end,
                     substr(v_id, 1, 2),
                     case when v_upper_inc1 then ']' else ')' end,
@@ -60,12 +60,70 @@ begin
             );
         elsif length(v_id) = 0 then
             return next is((reduce(array[]::tstzrange[]))::text, v_result::text,
-                format('reduce empty array id=%s', v_result_id)
+                format('reduce tstz empty array id=%s', v_result_id)
             );
         end if;
     end loop;
 end;
 $func$;
+
+create or replace function test_reduce_date()
+returns setof text
+language plpgsql as $func$
+declare
+    v_id text;
+    v_result_id integer;
+    v_r1_lower timestamptz;
+    v_r1_upper timestamptz;
+    v_r2_lower timestamptz;
+    v_r2_upper timestamptz;
+    v_lower_inc1 boolean;
+    v_upper_inc1 boolean;
+    v_lower_inc2 boolean;
+    v_upper_inc2 boolean;
+    v_result daterange[];
+begin
+    return next ok((reduce(null::daterange[]) is null), 'reduce(null) returns null');
+
+    for v_result_id, v_id, v_r1_lower, v_r1_upper, v_r2_lower, v_r2_upper, v_lower_inc1, v_upper_inc1, v_lower_inc2, v_upper_inc2, v_result in
+    select tr.id, ts.id, r1_lower, r1_upper, r2_lower, r2_upper, lower_inc1, upper_inc1, lower_inc2, upper_inc2, tr.result_date
+    from
+        test_sequence ts
+        join test_result tr on ts.id = tr.sequence_id
+    where
+        tr.operator = '+'
+        and tr.result_date is not null
+    order by tr.id LOOP
+        if length(v_id) = 4 then
+            return next is((reduce(array[daterange(v_r1_lower::date, v_r1_upper::date, pgchronos_range_inclusiveness_text(v_lower_inc1, v_upper_inc1)), daterange(v_r2_lower::date, v_r2_upper::date, pgchronos_range_inclusiveness_text(v_lower_inc2, v_upper_inc2))]))::text, v_result::text,
+                format('reduce date %s%s%s %s%s%s id=%s',
+                    case when v_lower_inc1 then '[' else '(' end,
+                    substr(v_id, 1, 2),
+                    case when v_upper_inc1 then ']' else ')' end,
+                    case when v_lower_inc2 then '[' else '(' end,
+                    substr(v_id, 3),
+                    case when v_upper_inc2 then ']' else ')' end,
+                    v_result_id
+                )
+            );
+        elsif length(v_id) = 2 then
+            return next is((reduce(array[daterange(v_r1_lower::date, v_r1_upper::date, pgchronos_range_inclusiveness_text(v_lower_inc1, v_upper_inc1))]))::text, v_result::text,
+                format('reduce date %s%s%s id=%s',
+                    case when v_lower_inc1 then '[' else '(' end,
+                    substr(v_id, 1, 2),
+                    case when v_upper_inc1 then ']' else ')' end,
+                    v_result_id
+                )
+            );
+        elsif length(v_id) = 0 then
+            return next is((reduce(array[]::daterange[]))::text, v_result::text,
+                format('reduce date empty array id=%s', v_result_id)
+            );
+        end if;
+    end loop;
+end;
+$func$;
+
 
 select * from runtests();
 

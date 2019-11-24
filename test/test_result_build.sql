@@ -1,18 +1,9 @@
 \set ON_ERROR_STOP true
 begin;
 
-/******************
-* Reduce tstz 
-*******************/
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
-select
-    '' as id,
-    'tstz' datatype,
-    '+' op,
-    false,
-    false,
-    reduce(array[]::tstzrange[]) result
-;
+/****************************
+* Build combinations tables 
+*****************************/
 
 select
     ts.id,
@@ -44,24 +35,6 @@ where
         r1_lower = r1_upper
         and (not lower_inc1 or not upper_inc1)
     )
-;
-
-insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
-select
---     format('%s%s%s',
---         case when lower_inc1 then '[' else '(' end,
---         substr(id, 1, 2),
---         case when upper_inc1 then ']' else ')' end
---     ) id,
-    id,
-    'tstz' datatype,
-    '+' op,
-    lower_inc1,
-    upper_inc1,
-    reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
-from tmp_combos_2
-order by 1,3,4,5
---order by 1
 ;
 
 select
@@ -114,6 +87,37 @@ where true
         r2_lower = r2_upper
         and (not lower_inc2 or not upper_inc2)
     )
+;
+
+/******************
+* Reduce tstz 
+*******************/
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
+select
+    '' as id,
+    'tstz' datatype,
+    '+' op,
+    false,
+    false,
+    reduce(array[]::tstzrange[]) result
+;
+
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
+select
+--     format('%s%s%s',
+--         case when lower_inc1 then '[' else '(' end,
+--         substr(id, 1, 2),
+--         case when upper_inc1 then ']' else ')' end
+--     ) id,
+    id,
+    'tstz' datatype,
+    '+' op,
+    lower_inc1,
+    upper_inc1,
+    reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
+from tmp_combos_2
+order by 1,3,4,5
+--order by 1
 ;
 
 insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_tstz)
@@ -179,4 +183,9 @@ from tmp_combos_4
 order by 1,3,4,5,6
 --order by 1
 ;
+
+/******************
+* Intersection date 
+*******************/
+
 commit;

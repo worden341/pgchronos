@@ -15,6 +15,8 @@ As an example of a difference operation, imagine a hotel where frequent customer
     [2015-01-07,2015-01-21)
     [2015-01-22,2015-01-29)
 
+Version 1.0.1 was released tagged as "stable", which was incorrect. Version 1.x should be viewed as a conceptual demonstration of alpha quality; it is not suitable for production use. A mature version is under development in the version 2 branch of the source.
+
 These functions were originally developed as part of the ChronosDB project.  That code became half-redundant when Postgres introduced range data types in version 9.2. This code is a fork that brings it current with the latest Postgres versions, and utilizes the native Postgres range data types.  The current project site is <https://github.com/worden341/pgchronos>.
 
 

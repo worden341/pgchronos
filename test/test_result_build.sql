@@ -32,9 +32,10 @@ where
     )
     and not
     (
-        r1_lower = r1_upper
+        coalesce(r1_lower,now()) = coalesce(r1_upper,now())
         and (not lower_inc1 or not upper_inc1)
     )
+order by 1,4,5
 ;
 
 select
@@ -79,14 +80,15 @@ where true
     and not (ts.id = '1111' and inc1.lower_inc1) --eliminate redundant tests
     and not --invalid
     (
-        r1_lower = r1_upper
+        coalesce(r1_lower,now()) = coalesce(r1_upper,now())
         and (not lower_inc1 or not upper_inc1)
     )
     and not --invalid
     (
-        r2_lower = r2_upper
+        coalesce(r2_lower,now()) = coalesce(r2_upper,now())
         and (not lower_inc2 or not upper_inc2)
     )
+order by 1,6,7,8,9
 ;
 
 /******************
@@ -116,7 +118,7 @@ select
     upper_inc1,
     reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
 from tmp_combos_2
-order by 1,3,4,5
+order by 1,4,5
 --order by 1
 ;
 
@@ -139,14 +141,13 @@ select
     upper_inc2,
     reduce(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1)), tstzrange(r2_lower, r2_upper, pgchronos_range_inclusiveness_text(lower_inc2, upper_inc2))]) result
 from tmp_combos_4
-order by 1,3,4,5,6
+order by 1,4,5,6,7
 --order by 1
 ;
 
 /******************
 * Reduce date 
 *******************/
-
 insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_date)
 select
     '' as id,
@@ -166,7 +167,7 @@ select
     upper_inc1,
     reduce(array[daterange(r1_lower::date, r1_upper::date, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
 from tmp_combos_2
-order by 1,3,4,5
+order by 1,4,5
 --order by 1
 ;
 insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_date)
@@ -180,7 +181,7 @@ select
     upper_inc2,
     reduce(array[daterange(r1_lower::date, r1_upper::date, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1)), daterange(r2_lower::date, r2_upper::date, pgchronos_range_inclusiveness_text(lower_inc2, upper_inc2))]) result
 from tmp_combos_4
-order by 1,3,4,5,6
+order by 1,4,5,6,7
 --order by 1
 ;
 

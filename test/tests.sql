@@ -85,6 +85,8 @@ declare
 begin
     return next ok((reduce(null::daterange[]) is null), 'reduce(null) returns null');
 
+    return next is(reduce(array[daterange('2000-01-01','2000-01-02'),daterange('2000-01-02','2000-01-03')]), array[daterange('2000-01-01','2000-01-03')] ,'reduce adjacent date ranges');
+
     for v_result_id, v_id, v_r1_lower, v_r1_upper, v_r2_lower, v_r2_upper, v_lower_inc1, v_upper_inc1, v_lower_inc2, v_upper_inc2, v_result in
     select tr.id, ts.id, r1_lower, r1_upper, r2_lower, r2_upper, lower_inc1, upper_inc1, lower_inc2, upper_inc2, tr.result_date
     from

@@ -167,6 +167,9 @@ select
     upper_inc1,
     reduce(array[daterange(r1_lower::date, r1_upper::date, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))]) result
 from tmp_combos_2
+where
+    --variations in inclusiveness are irrelevant here:
+    lower_inc1 and not upper_inc1
 order by 1,4,5
 --order by 1
 ;
@@ -181,6 +184,10 @@ select
     upper_inc2,
     reduce(array[daterange(r1_lower::date, r1_upper::date, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1)), daterange(r2_lower::date, r2_upper::date, pgchronos_range_inclusiveness_text(lower_inc2, upper_inc2))]) result
 from tmp_combos_4
+where
+    --variations in inclusiveness are irrelevant here:
+    (lower_inc1 and not upper_inc1)
+    and (lower_inc2 and not upper_inc2)
 order by 1,4,5,6,7
 --order by 1
 ;

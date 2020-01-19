@@ -196,4 +196,31 @@ order by 1,4,5,6,7
 * Intersection date 
 *******************/
 
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_date)
+select
+    '' as id,
+    'date' datatype,
+    '*' op,
+    false,
+    false,
+    intersection(array[]::daterange[], array[]::daterange[]) result
+;
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_date)
+select
+    id,
+    'date' datatype,
+    '*' op,
+    lower_inc1,
+    upper_inc1,
+    lower_inc2,
+    upper_inc2,
+    intersection(array[daterange(r1_lower::date, r1_upper::date)], array[daterange(r2_lower::date, r2_upper::date)]) result
+from tmp_combos_4
+where
+    --variations in inclusiveness are irrelevant here:
+    (lower_inc1 and not upper_inc1)
+    and (lower_inc2 and not upper_inc2)
+order by 1,3,4,5,6
+;
+
 commit;

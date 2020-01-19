@@ -258,36 +258,12 @@ CREATE OR REPLACE FUNCTION intersection(
 $$
     SELECT array_agg(t)
     FROM (
-        SELECT tstzrange(start_date, MIN(end_date)) AS t
-        FROM (
-            SELECT DISTINCT lower(d) AS start_date
-            FROM unnest(dr1) d
-            WHERE NOT exists_adjacent_lower(d,dr1)
-              AND contains(dr2, lower(d))
-
-            UNION
-
-            SELECT DISTINCT lower(d) 
-            FROM unnest(dr2) d
-            WHERE NOT exists_adjacent_lower(d,dr2)
-              AND contains(dr1, lower(d))
-        ) AS t_in
-        JOIN (
-            SELECT upper(d) AS end_date
-            FROM unnest(dr1) d
-            WHERE NOT contains(dr1, upper(d))
-              AND (contains(dr2, upper(d)) OR exists_upper(upper(d),dr2))
-
-            UNION ALL
-
-            SELECT upper(d)
-            FROM unnest(dr2) d
-            WHERE NOT contains(dr2, upper(d))
-              AND (contains(dr1, upper(d)) OR exists_upper(upper(d),dr1))
-        ) AS t_out ON t_in.start_date < t_out.end_date
-        GROUP BY t_in.start_date
-        ORDER BY t_in.start_date
-    ) sub;
+        SELECT rr1.r * rr2.r AS t
+        FROM
+            (select unnest r from unnest(dr1)) rr1
+            join (select unnest r from unnest(dr2)) rr2
+                on rr1.r && rr2.r
+        ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
 COMMENT ON FUNCTION intersection(tstzrange[], tstzrange[]) IS 'Return all range segments common to both operands';
 
@@ -298,36 +274,12 @@ CREATE OR REPLACE FUNCTION intersection(
 $$
     SELECT array_agg(t)
     FROM (
-        SELECT daterange(start_date, MIN(end_date)) AS t
-        FROM (
-            SELECT DISTINCT lower(d) AS start_date
-            FROM unnest(dr1) d
-            WHERE NOT contains(dr1, lower(d) - 1)
-              AND contains(dr2, lower(d))
-
-            UNION
-
-            SELECT DISTINCT lower(d) 
-            FROM unnest(dr2) d
-            WHERE NOT contains(dr2, lower(d) - 1)
-              AND contains(dr1, lower(d))
-        ) AS t_in
-        JOIN (
-            SELECT upper(d) AS end_date
-            FROM unnest(dr1) d
-            WHERE NOT contains(dr1, upper(d))
-              AND contains(dr2, upper(d)-1)
-
-            UNION ALL
-
-            SELECT upper(d)
-            FROM unnest(dr2) d
-            WHERE NOT contains(dr2, upper(d))
-              AND contains(dr1, upper(d)-1)
-        ) AS t_out ON t_in.start_date < t_out.end_date
-        GROUP BY t_in.start_date
-        ORDER BY t_in.start_date
-    ) sub;
+        SELECT rr1.r * rr2.r AS t
+        FROM 
+            (select unnest r from unnest(dr1)) rr1
+            join (select unnest r from unnest(dr2)) rr2
+                on rr1.r && rr2.r
+        ) sub;
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
 COMMENT ON FUNCTION intersection(daterange[], daterange[]) IS 'Return all range segments common to both operands';
 

@@ -1,6 +1,8 @@
 \set ON_ERROR_STOP true
 begin;
 
+delete from test_result;
+
 /****************************
 * Build combinations tables 
 *****************************/
@@ -191,6 +193,35 @@ where
 order by 1,4,5,6,7
 --order by 1
 ;
+
+/******************
+* Intersection tstz 
+*******************/
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, result_tstz)
+select
+    '' as id,
+    'tstz' datatype,
+    '*' op,
+    false,
+    false,
+    intersection(array[]::tstzrange[], array[]::tstzrange[]) result
+;
+
+insert into test_result (sequence_id, datatype, operator, lower_inc1, upper_inc1, lower_inc2, upper_inc2, result_tstz)
+select
+    id,
+    'tstz' datatype,
+    '*' op,
+    lower_inc1,
+    upper_inc1,
+    lower_inc2,
+    upper_inc2,
+    intersection(array[tstzrange(r1_lower, r1_upper, pgchronos_range_inclusiveness_text(lower_inc1, upper_inc1))], array[tstzrange(r2_lower, r2_upper, pgchronos_range_inclusiveness_text(lower_inc2, upper_inc2))]) result
+from tmp_combos_4
+order by 1,4,5,6,7
+--order by 1
+;
+
 
 /******************
 * Intersection date 

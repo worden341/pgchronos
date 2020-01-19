@@ -126,6 +126,95 @@ begin
 end;
 $func$;
 
+create or replace function test_intersection_tstz()
+returns setof text
+language plpgsql as $func$
+declare
+    v_id text;
+    v_result_id integer;
+    v_r1_lower timestamptz;
+    v_r1_upper timestamptz;
+    v_r2_lower timestamptz;
+    v_r2_upper timestamptz;
+    v_lower_inc1 boolean;
+    v_upper_inc1 boolean;
+    v_lower_inc2 boolean;
+    v_upper_inc2 boolean;
+    v_result tstzrange[];
+begin
+    return next ok((intersection(null::tstzrange[], null::tstzrange[]) is null), 'intersection(null,null) returns null');
+
+    for v_result_id, v_id, v_r1_lower, v_r1_upper, v_r2_lower, v_r2_upper, v_lower_inc1, v_upper_inc1, v_lower_inc2, v_upper_inc2, v_result in
+    select tr.id, ts.id, r1_lower, r1_upper, r2_lower, r2_upper, lower_inc1, upper_inc1, lower_inc2, upper_inc2, tr.result_tstz
+    from
+        test_sequence ts
+        join test_result tr on ts.id = tr.sequence_id
+    where
+        tr.operator = '*'
+        and tr.result_tstz is not null
+    order by tr.id LOOP
+        if length(v_id) = 4 then
+            return next is((intersection(array[tstzrange(v_r1_lower, v_r1_upper, pgchronos_range_inclusiveness_text(v_lower_inc1, v_upper_inc1))], array[tstzrange(v_r2_lower, v_r2_upper, pgchronos_range_inclusiveness_text(v_lower_inc2, v_upper_inc2))]))::text, v_result::text,
+                format('intersection tstz %s%s%s %s%s%s id=%s',
+                    case when v_lower_inc1 then '[' else '(' end,
+                    substr(v_id, 1, 2),
+                    case when v_upper_inc1 then ']' else ')' end,
+                    case when v_lower_inc2 then '[' else '(' end,
+                    substr(v_id, 3),
+                    case when v_upper_inc2 then ']' else ')' end,
+                    v_result_id
+                )
+            );
+        end if;
+    end loop;
+end;
+$func$;
+
+create or replace function test_intersection_date()
+returns setof text
+language plpgsql as $func$
+declare
+    v_id text;
+    v_result_id integer;
+    v_r1_lower timestamptz;
+    v_r1_upper timestamptz;
+    v_r2_lower timestamptz;
+    v_r2_upper timestamptz;
+    v_lower_inc1 boolean;
+    v_upper_inc1 boolean;
+    v_lower_inc2 boolean;
+    v_upper_inc2 boolean;
+    v_result daterange[];
+begin
+    return next ok((intersection(null::daterange[], null::daterange[]) is null), 'intersection(null,null) returns null');
+
+    return next is(intersection(array[daterange('2000-01-01','2000-01-02')], array[daterange('2000-01-02','2000-01-03')]), null::daterange[],'intersection adjacent date ranges');
+
+    for v_result_id, v_id, v_r1_lower, v_r1_upper, v_r2_lower, v_r2_upper, v_lower_inc1, v_upper_inc1, v_lower_inc2, v_upper_inc2, v_result in
+    select tr.id, ts.id, r1_lower, r1_upper, r2_lower, r2_upper, lower_inc1, upper_inc1, lower_inc2, upper_inc2, tr.result_date
+    from
+        test_sequence ts
+        join test_result tr on ts.id = tr.sequence_id
+    where
+        tr.operator = '*'
+        and tr.result_date is not null
+    order by tr.id LOOP
+        if length(v_id) = 4 then
+            return next is((intersection(array[daterange(v_r1_lower::date, v_r1_upper::date)], array[daterange(v_r2_lower::date, v_r2_upper::date)]))::text, v_result::text,
+                format('intersection date %s%s%s %s%s%s id=%s',
+                    case when v_lower_inc1 then '[' else '(' end,
+                    substr(v_id, 1, 2),
+                    case when v_upper_inc1 then ']' else ')' end,
+                    case when v_lower_inc2 then '[' else '(' end,
+                    substr(v_id, 3),
+                    case when v_upper_inc2 then ']' else ')' end,
+                    v_result_id
+                )
+            );
+        end if;
+    end loop;
+end;
+$func$;
 
 select * from runtests();
 

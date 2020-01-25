@@ -410,10 +410,40 @@ CREATE OR REPLACE FUNCTION range_union(
    dr2  IN tstzrange[]
 ) RETURNS tstzrange[] AS
 $$
-   SELECT reduce(dr1 || dr2);
+with dr1t as (select unnest(dr1) dr),
+dr2t as (select unnest(dr2) dr),
+intersecting as
+(
+    select
+        (
+            select array_agg(dr)
+            from dr1t
+            where exists (select dr from dr2t where dr && dr1t.dr)
+        ) ||
+        (
+            select array_agg(dr)
+            from dr2t
+            where exists (select dr from dr1t where dr && dr2t.dr)
+        ) dr
+),
+nonintersecting as
+(
+    select
+        (
+            select array_agg(dr)
+            from dr1t
+            where not exists (select dr from dr2t where dr && dr1t.dr)
+        ) ||
+        (
+            select array_agg(dr)
+            from dr2t
+            where not exists (select dr from dr1t where dr && dr2t.dr)
+        ) dr
+)
+SELECT reduce((select dr from intersecting)) || (select dr from nonintersecting);
 $$ LANGUAGE 'sql' IMMUTABLE STRICT;
 COMMENT ON FUNCTION range_union(tstzrange[], tstzrange[])
-IS 'Union overlapping and adjacent ranges into an array of non-overlapping and non-adjacent ranges';
+IS 'Concatenate the operands; where ranges in the operands intersect, union overlapping and adjacent ranges to non-overlapping and non-adjacent ranges';
 
 CREATE OR REPLACE FUNCTION range_union(
    dr1  IN daterange[],

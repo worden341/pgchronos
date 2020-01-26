@@ -126,6 +126,28 @@ begin
 end;
 $func$;
 
+create or replace function test_range_union_tstz()
+returns setof text
+language plpgsql as $func$
+declare
+    c_want constant tstzrange[] := '{"[\"1999-12-31 16:00:00-08\",\"2000-01-01 04:00:00-08\")","[\"2000-01-01 16:00:00-08\",\"2000-01-02 04:00:00-08\")","[\"2000-01-03 16:00:00-08\",\"2000-01-04 10:00:00-08\")","[\"2000-01-02 16:00:00-08\",\"2000-01-03 10:00:00-08\")","[\"2000-01-04 16:00:00-08\",\"2000-01-05 04:00:00-08\")"}';
+    v_have tstzrange[];
+begin
+   with twoa as
+(
+select
+    array[tstzrange('2000-01-01 00:00+0', '2000-01-01 00:00+0'::timestamp with time zone + '12 hours')] ||  array_agg(tstzrange(d1.generate_series, d1.generate_series + '12 hours'::interval)) dra1,
+    (array_agg(tstzrange(d1.generate_series + '6 hours'::interval, d1.generate_series + '18 hours'::interval)))[3:4] dra2
+from
+    (select generate_series('2000-01-01 00:00+0', '2000-01-01 00:00+0'::timestamp with time zone + '4 days'::interval, '1 day'::interval)) d1
+)
+select range_union(dra1,dra2) into v_have from twoa;
+
+    return next cmp_ok(v_have, '@>', c_want, 'tstz range_union result contains expected result');
+    return next cmp_ok(c_want, '<@', v_have, 'tstz range_union expected result contains actual result');
+end;
+$func$;
+
 create or replace function test_intersection_tstz()
 returns setof text
 language plpgsql as $func$
